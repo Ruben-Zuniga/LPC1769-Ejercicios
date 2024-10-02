@@ -18,6 +18,7 @@
 #include "lpc17xx_exti.h"
 
 #define PRESCALE SystemCoreClock / 10e6 - 1
+//#define PRESCALE 0 	// Por si no funciona con el de arriba
 #define MATCH_N 4
 
 void config_pins(void);
@@ -47,7 +48,7 @@ void config_pins(){
 	PINSEL_CFG_Type p0_3_cfg 	= {0, 3,  0, 2, 0};
 	PINSEL_ConfigPin(&p0_3_cfg);
 	GPIO_SetDir(0, 0xf, 1);								// P0.0 to P0.3 as output
-	//FIO_SetMask(0, ~0xf, 1);							// Only P0.0 to P0.3 are affected by FIOPIN
+	FIO_SetMask(0, ~0xf, 1);							// Only P0.0 to P0.3 are affected by FIOPIN
 
 	PINSEL_CFG_Type p1_28_cfg 	= {1, 28, 3, 2, 0};		// P1.28 as MAT0.0
 	PINSEL_ConfigPin(&p1_28_cfg);
@@ -109,19 +110,18 @@ void TIMER1_IRQHandler(){
 	static uint32_t val = 0;
 	static uint32_t val_prev = 0;
 	static uint32_t period = 0;
-	uint32_t period_350k = SystemCoreClock / (350e3 * (PRESCALE + 1));
-	uint32_t period_250k = SystemCoreClock / (250e3 * (PRESCALE + 1));
-	uint32_t period_150k = SystemCoreClock / (150e3 * (PRESCALE + 1));
-	uint32_t period_50k = SystemCoreClock / (50e3 * (PRESCALE + 1));
+	static uint32_t frequency = 0;
+	static uint8_t n_pins = 0;
 
 	val = LPC_TIM1->CR0;
 	period = val - val_prev;
 	val_prev = val;
-
-	if(period < period_350k){
-		if(period < period_250k){
-			if(period < period_150k){
-				if(period < period_50k){
+	frequency = SystemCoreClock / (period * (PRESCALE + 1));
+	/*
+	if(frequency < 350e100){
+		if(frequency < 250e100){
+			if(frequency < 150e100){
+				if(frequency < 50e100){
 					GPIO_ClearValue(0, 0xf);
 				}
 				else{
@@ -142,6 +142,9 @@ void TIMER1_IRQHandler(){
 	else{
 		GPIO_SetValue(0, 0xf);
 	}
+	*/
+	n_pins = frequency / 100e3 - 1;
+	LPC_GPIO0->FIOPIN = (1 << n_pins);
 	LPC_TIM1->IR |= (1 << 4);
 }
 
